@@ -1,0 +1,237 @@
+---
+title: "STAT 530 HW 3"
+author: "Md Muhtasim Billah"
+date: "3/4/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question
+
+Use the following data HW_3_2020.csv to answer the following questions. We are interested in modeling Calories consumed using the predictors: Weight, 	Height, 	Protein,	Carbohydrates,	Calcium,	gender.
+
+1.	Fit the data and find estimates of the partial slopes.
+2.	Test for the significance of the slopes.
+3.	What is the sequential effect (extra sums of squares) 
+4.	What is partial sum of squares?
+5.	Do the relevant diagnostics.
+6.	Is this a good model?
+7.	Comment on the following statements saying if it is TRUE or FALSE with reason:
+
+    a.	The best measure for model selection is the Adjusted R-square.
+    b.	Partial sums of squares are more useful than sequential sums of squares.
+    c.	If we have a categorical variable with 4 categories we will need 4 dummy variables to model this.
+
+
+
+
+# Answers
+
+### 1. Fit the data and find estimates of the partial slopes.
+
+```{r message=FALSE, warning=FALSE}
+#setting working directory
+setwd("/Users/muhtasim/Desktop")
+#importing data
+mydata=read.csv("HW_3_2020.csv", header=T)
+#data summary
+summary(mydata)
+#fitting the data in a MLR model
+fit = lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium + gender, data = mydata)
+#partial slopes for the predictors
+round(fit$coefficients, 3)
+```
+
+From the summary of the data, we can see that for both the variables Weight.lbs and Heights.Inches, the Min. value is -1.00 which doesn't have any physical meaning. This unreasonable values might have been caused by an error during the data measurement. We will discard these data points and fit the model on the cleaned data.
+
+```{r message=FALSE, warning=FALSE}
+#importing cleaned data
+mydata1=read.csv("HW3_2020_clean.csv", header=T)
+#summary of the data
+summary(mydata1)
+#doing MLR
+fit1 = lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium + gender, data = mydata1)
+#estimates of the partial slopes upto three decimal points
+round(fit1$coefficients, 3)
+```
+
+
+### 2.	Test for the significance of the slopes.
+
+```{r message=FALSE, warning=FALSE}
+library(vars)
+round(coeftest(fit1), 3)
+```
+
+For testing the significance of the partial slopes,\newline
+
+The null hypothesis is, $H_0: \beta_i=0$.\newline
+The alternative hypothesis is, $H_a: \beta_i\ne0$.\newline
+Level of significane, $\alpha=0.05$.\newline
+
+From the t-test carried out for the partial slopes, we notice that the intecept is found not statistically significant (p-value = 0.417). This means, there is not enough statistical evidence to show that the coefficient differs from zero. The p-values for protein (< 0.001) and carbohydrates (<0.001) are indicating that there is sufficient statistical evidence to conclude that they are having significant effect on calory levels. The positive coefficients are also telling these effects are positive. Calcium has significant (p-value = 0.001) negative effect on calory. That means with the increase of calcium intake there is a significant decrease of calory is found. The only categirial predictor in the model is “gender” which has two categories, Male and Female. However, gender has no significant effect on the calory. 
+
+So, to summarize, only the predictors Protein, Carbohydrates and Calcium are statistically significant for an $\alpha=0.05$. This means that there is enough statistical evidence to show that the coefficient is not zero i.e the response variable (Calories) is dependent on these three predictors at the population level. This also indicates that these three predictors are good addition to the model while the rest might not be. Thus, for a more precise model, dropping the other predictors might be considered.
+
+
+### 3.	What is the sequential effect (extra sums of squares)?
+
+The extra sums of squares or the type-I sums of squares are calculates using SAS and provided in the Table 1 below.
+
+\begin{center}
+\begin{tabular}{|l|c|}
+\hline
+Variables     & Sequential Effects \\
+\hline
+Intercept     & 307420173 \\
+\hline
+Weight        & 2247916  \\
+\hline
+Height        & 976053  \\
+\hline
+Protein       & 35015094  \\
+\hline
+Carbohydrates & 4455239  \\
+\hline
+Calcium       & 410255   \\
+\hline
+Gender        & 45343   \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\textbf{Table 1:} Sequential effects (Type-I sums of squares)
+\end{center}
+
+
+### 4.	What is partial sum of squares?
+
+The partial sums of squares or the type-II sums of squares are calculates using SAS and provided in the Table 2 below.
+
+\begin{center}
+\begin{tabular}{|l|c|}
+\hline
+Variables     & Partial Effect \\
+\hline
+Intercept     & 23561  \\
+\hline
+Weight        & 91240  \\
+\hline
+Height        & 6031.91   \\
+\hline
+Protein       & 3205098    \\
+\hline
+Carbohydrates & 4658804   \\
+\hline
+Calcium       & 454421    \\
+\hline
+Gender        & 45343   \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\textbf{Table 2:} Partial effects (Type-II sums of squares)
+\end{center}
+
+
+### 5.	Do the relevant diagnostics.
+
+
+  I) Overall significance
+  
+```{r}
+#summary of the fitted regression model
+summary = summary(fit1)
+summary
+```
+
+From, the p-value of the fitted model, it can be said that it is statistically significant with an $\alpha=0.05$. It means that the overall model is significant to study the functional relationship between the calory and the predictor variables. Also, from the high R-squared and Adjusted R-squared value, it can be concluded that a high percentage of variance (~93%) was explained by this model which also indicates the model's goodness of fit.
+  
+
+  II) Normality Test
+ 
+ 
+\underline{Shapiro-Wilk test}: Since the p-value>$\alpha=0.05$, the null is retained. Which means that the residuals belong to a normal distribution.
+```{r}
+shapiro.test(fit1$residuals)
+``` 
+\underline{Normal probability plot or the QQ plot}: Though, the residuls deviate a bit from the line at the tails, most of the data are along the line which also indicates too a normal distribution of the residuals.
+```{r fig.height=4, fig.width=6}
+qqnorm(fit1$residuals)
+qqline(fit1$res)
+```
+
+
+  III) Constant Variance Test
+
+\underline{Fitted vs Rsiduals plot}: From the plot, we see a random scatter of the residuals rather than a noticeable pattern. This indicates to a constant variance of the data.
+```{r fig.height=4, fig.width=6}
+plot(fit1$fitted.values, fit1$residuals)
+```
+
+\underline{Breusch-Pagan test}: From the test, it's evident that p-value>$\alpha=0.05$ and so the null is retained. This also indicates that the data has constant variance.
+```{r}
+lmtest::bptest(fit1)
+```
+
+
+  IV) Autocorrelation Test
+
+\underline{Durbin-Watson test}: Since the p-value>$\alpha=0.05$, the null is retained. The D-W value of 1.97 indicates that the fitted model residuals are free of autocorrelation.
+
+```{r warning=FALSE}
+dwtest(fit1)
+```
+
+  V) Linearity Test
+
+Residuals vs the predictor variables' plots. It is evident that for Height, Protein and Carbohydrate, the residuals are very linear while for the rest of the predictors, it is less linear. 
+```{r, warning=FALSE, message=FALSE}
+library(car)
+attach(mydata1)
+
+fit.l = lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium , data = mydata1)
+
+ceresPlots(fit.l)
+```
+
+
+  VI) Potential Outliers
+
+From the Cook's distance plot, we see that there is a huge outlier in the dataset (observation number 56) which can be an influencial point. For building a better model, observations number 11, 28, 62 can also be considered.
+```{r fig.height=4, fig.width=6}
+#cook's distance
+plot(fit1, 4, id.n = 5)
+```
+
+
+### 6.	Is this a good model?
+
+From the overall diagnostics of the model, the R-squared values, the tests for normality, constant variance and autocorrelation it can be said that it is a good model.
+
+
+
+### 7.	Comment on the following statements saying if it is TRUE or FALSE with reason:
+
+  a. The best measure for model selection is the Adjusted R-square. **TRUE**\newline
+
+\underline{Reason}: The issue with $R^{2}$ is that if a new predictor is added to the model, its value goes up whether it's adding any significant effect to the model or not. However, adjusted $R^{2}$ is a better measure which can remedy this issue. It takes into account the number of predictors in the model and penalizes for too many predictors. So, better information about the model is previded by adjusted $R^{2}$. 
+
+  b.	Partial sums of squares are more useful than sequential sums of squares. **TRUE**\newline
+
+\underline{Reason}: Paritial sum of squares are more appropriate when there is no interaction among the predictors of the model, irrespective of the order in which they enter the model.  So, as opposed to the sequential (extra) sums of square where the order is an issue, the partial sum of squares is a better measure. 
+
+  c.	If we have a categorical variable with 4 categories we will need 4 dummy variables to model this. **FALSE**\newline
+
+\underline{Reason}: In general, to model a categorical variables with k levels, we require (k-1) dummy variables. Thus, if we have a categorical variable with 4 categories we will need 3 dummy variables to model this.
+
+
+
+
+
+

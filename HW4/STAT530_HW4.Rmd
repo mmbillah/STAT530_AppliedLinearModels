@@ -1,0 +1,188 @@
+---
+title: "STAT 530 HW 4"
+author: "Md Muhtasim Billah"
+date: "4/6/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1.	
+
+Use the data set you used in HW 3 and answer the following questions.
+ 
+  a.	Do two iterations of weighted least squares.
+  b.	Run robust regression (M with Huber weights) to see if influential observations were an issue.
+  c.	Use Ridge Regression to see with c between .01 and .1 and provide the ridge plot.
+
+# Answer:
+
+## a.
+
+Weighted least square (WLS) is performed as a remedy when the assumption of constant variance of the residuals are violated. The data set used in HW3 has been "cleaned" and then used for two iterations of WLS.
+
+```{r}
+#setting working directory
+setwd("/Users/muhtasim/Desktop/STAT530/HWs/HW4")
+#reading the "cleaned" HW3 data
+mydata=read.csv("HW3.csv",header=TRUE)
+#fit the regression model using unweighted/ordinary least squares (OLS)
+fit = lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium
+         + gender, data = mydata)
+#find the residuals
+r=resid(fit)
+#take the square of the residuals
+esq=r*r
+#regress squared residuals on the relevant predictors
+efit=lm(esq ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium
+        + gender, data = mydata)
+#find the predicted values from the above regression
+p=predict(efit)
+#use the predicted values to estimate the weight function
+w=1/abs(p)
+#now fit the regression model for weighted least square (WLS) using the weight w
+fit2=lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium
+        + gender, data = mydata, weight=w)
+#iteration 1 ends
+
+#iteration 2
+r1=resid(fit2)
+esq1=r1*r1
+efit1=lm(esq1 ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium
+         + gender, data = mydata)
+p1=predict(efit1)
+w1=1/abs(p1)
+fit3=lm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + Calcium
+        + gender, data = mydata, weight=w1)
+#find coefficient for OLS regression
+coef(fit)
+#find coefficient for WLS regression for iteration 1
+coef(fit2)
+#find coefficient for WLS regression for iteration 2
+coef(fit3)
+```
+It is evident that the WLS estimates from the first and second iterations are very different from the ordinary least squares (OLS). To reach stability, several more iterations might be required.
+
+
+## b.
+
+Robust regression is performed when there are potential ourliers or influencial points in the dataset. Iterated re-weighted least squares (IRLS) is one of the most frequently used method for robust regression. There are several weighting functions that can be used for IRLS such as Huber weights and bi-weights. Different functions have advantages and drawbacks. Huber weights can have difficulties with severe outliers, and bisquare weights can have difficulties converging or may yield multiple solutions. For this problem, Huber weights will be used with M-estimation where M stands for "maximum likelihood type". The M-estimation is robust to outliers in the response variable, but not resistant to outliers in the explanatory variables (leverage points).
+
+```{r}
+#robust regression (M with Huber weights)
+#rlm function fits a linear model by robust regression using an M estimator
+#fitting is done by iterated re-weighted least squares (IRLS).
+library(MASS)
+fit_robust = rlm(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates 
+                 + Calcium + gender, data = mydata, method = c("M"), psi = psi.huber)
+r = rstudent(fit_robust)
+absr = abs(r)
+hweights = data.frame(residuals= fit_robust$residuals, stud_resids = r, 
+                      abs_stdres = absr, huber_weights = fit_robust$w)
+hweights2 = hweights[order(fit_robust$w), ]
+hweights2[1:20, ]
+```
+
+We can see that roughly, as the absolute studentized residuals go down, the huber weights goes up. In other words, cases with a large residual tend to be down-weighted. In OLS regression, all cases have a weight of 1. Hence, the more cases in the robust regression that have a weight close to one, the closer the results of the OLS and robust regressions. Here, we see that apart from the first 17 observation listed in the table above, rest have weights of 1. So, there is an issue of influencial points.
+
+When comparing the results of a regular OLS regression and a robust regression, if the results are very different, it would be better to use the results from the robust regression. Large differences suggest that the model parameters are being highly influenced by outliers.
+
+
+## c.
+
+```{r}
+#package needed to generate correlated predictors
+library(MASS)
+#first ridge using library (MASS)
+ridgereg = lm.ridge(Calories ~ Weight.lbs + Height.Inches + Protein + Carbohydrates + 
+                      Calcium + gender, data = mydata, lambda = seq(0.01,0.1,0.01))
+#other data output method
+library(broom)
+td = tidy(ridgereg)
+g = glance(ridgereg)
+g
+#fancy plotting
+library(ggplot2)
+#plot of the estimates
+ggplot(td, aes(lambda, estimate, color = term)) + geom_line() + 
+  ggtitle("Ridge plot for lambda of 0.01 to 1.0") + 
+  theme(plot.title = element_text(hjust = 0.5))
+# plot of GCV versus lambda
+ggplot(td, aes(lambda, GCV)) + geom_line() + 
+  geom_vline(xintercept = g$lambdaGCV, col = "red", lty = 2) + 
+  ggtitle("Plot of GCV versus lambda") + theme(plot.title = element_text(hjust = 0.5))
+
+```
+Looking at the ridge plot, it is visible that the lines for each predictors are straight lines which indicates that there is no multicollinearity among the predictors of the dataset. Also, from the GCV vs lambda plot, we can see that the minimum GCV value occurs for the value of lambda = 0.1.
+
+
+
+
+
+\newpage
+# Question 2.	
+
+Do plots of residual versus predicted and residual versus observed. Are they the same plot? Comment on your findings.
+
+# Answer:
+
+The plots of residual versus predicted and residual versus observed are given below.
+
+```{r}
+#plot of residual vs fitted and observed values
+par(mfrow=c(1,2))
+plot(fit$fitted, fit$res)
+plot(mydata$Calories, fit$res)
+```
+
+\underline{Comment:}
+
+From the plots, it is visible that the two plots are similar but not exactly the same. Since predicted/fitted values are estimation of the observed value, they are mostly similar but not exactly the same.
+
+
+
+
+
+
+\newpage
+# Question 3.	
+
+Instead of doing residual analysis with residuals (for the example above) use the observed Y’s. Look at plots and tests. What do you get?
+
+# Answer:
+
+```{r}
+par(mfrow=c(1,2))
+# Normal probability plot of the observed Y's
+qqnorm(mydata$Calories)
+qqline(mydata$Calories)
+hist(mydata$Calories)
+#test for normality
+library(stats)
+shapiro.test(mydata$Calories)
+```
+
+
+\underline{Comment:}
+
+From the diagnostic plots, it seems like the observed Y's don't belong to a normal distribution.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
